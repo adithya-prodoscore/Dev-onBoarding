@@ -1,0 +1,190 @@
+openapi: 3.0.0
+
+info:
+  title: Dev Onboarding
+  version: 1.0.0
+  description: API for authentication and managing pins
+
+servers:
+  - url: http://localhost:5000
+
+paths:
+  # ---------------- AUTH ---------------- #
+
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        201:
+          description: User created
+        400:
+          description: Username already exists
+
+  /api/auth/login:
+    post:
+      summary: Login user and receive tokens
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: Access token returned (refresh token in cookie)
+        400:
+          description: Invalid credentials
+        404:
+          description: User not found
+
+  /api/auth/refresh:
+    post:
+      summary: Get new access token using refresh token
+      tags: [Auth]
+      responses:
+        200:
+          description: New access token generated
+        401:
+          description: No refresh token
+        403:
+          description: Invalid refresh token
+
+  # ---------------- PINS ---------------- #
+
+  /api/pins:
+    get:
+      summary: Get all pins
+      tags: [Pins]
+      parameters:
+        - in: query
+          name: author
+          schema:
+            type: string
+          description: Filter pins by author
+        - in: query
+          name: sort
+          schema:
+            type: string
+          description: Sort by field (e.g. createdAt)
+      responses:
+        200:
+          description: List of pins
+
+    post:
+      summary: Create a new pin (requires auth)
+      tags: [Pins]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body, imageLink]
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                imageLink:
+                  type: string
+      responses:
+        201:
+          description: Pin created
+        401:
+          description: Unauthorized
+
+  /api/pins/{id}:
+    get:
+      summary: Get a single pin
+      tags: [Pins]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Pin details
+        404:
+          description: Pin not found
+
+    put:
+      summary: Update a pin (requires auth)
+      tags: [Pins]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                image_link:
+                  type: string
+      responses:
+        200:
+          description: Pin updated successfully
+        401:
+          description: Unauthorized
+        404:
+          description: Pin not found
+
+    delete:
+      summary: Delete a pin (requires auth)
+      tags: [Pins]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Pin deleted
+        401:
+          description: Unauthorized
+
+# ---------------- SECURITY ---------------- #
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

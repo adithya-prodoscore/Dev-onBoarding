@@ -70,8 +70,8 @@ export const login = async (req, res) => {
 
   res.cookie("jwt", refreshToken, {
     httpOnly: true,
-    secure: true,
-    sameSite: "None",
+    secure: false,
+    sameSite: "lax",
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -127,8 +127,8 @@ export const refresh = async (req, res) => {
 
   res.cookie("jwt", newRefreshToken, {
     httpOnly: true,
-    secure: true,
-    sameSite: "None",
+    secure: false,
+    sameSite: "lax",
     maxAge: 24 * 60 * 60 * 1000,
   });
 
