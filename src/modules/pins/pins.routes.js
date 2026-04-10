@@ -8,15 +8,15 @@ import * as controller from "./pins.controller.js";
 router.post("/", controller.createPin);
 
 // Get all Pins (Public)
-router.post("/", controller.getPins);
+router.get("/", controller.getPins);
 
 // Get a Pin By ID (Public)
-router.post("/", controller.getPinById);
+router.get("/:id", controller.getPinById);
 
 // Update a Pin
-router.post("/", controller.updatePin);
+router.put("/", controller.updatePin);
 
 // Delete a Pin
-router.post("/", controller.deletePin);
+router.delete("/", controller.deletePin);
 
 export default router;

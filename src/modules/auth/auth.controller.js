@@ -2,30 +2,32 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 // Local Imports
-import User from "./auth.model.js";
+import pool from "../../shared/database/db.js";
 
 export const register = async (req, res) => {
   const { username, password } = req.body;
-  const existingUser = await User.findOne({ username });
 
-  if (existingUser) {
+  const [existing] = await pool.query(
+    "SELECT * FROM users WHERE username = ?",
+    [username],
+  );
+
+  if (existing.length > 0) {
     return res.status(400).json({ message: "Username already exists" });
   }
 
-  // Password Hashing
   const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = new User({
-    username,
-    password: hashedPassword,
-  });
 
-  await newUser.save();
+  const [result] = await pool.query(
+    "INSERT INTO users (username, password) VALUES (?, ?)",
+    [username, hashedPassword],
+  );
 
   res.status(201).json({
     message: "User created successfully",
     user: {
-      id: newUser._id,
-      username: newUser.username,
+      id: result.insertId,
+      username,
     },
   });
 };
@@ -33,35 +35,40 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   const { username, password } = req.body;
 
-  const foundUser = await User.findOne({
+  const [rows] = await pool.query("SELECT * FROM users WHERE username = ?", [
     username,
-  });
+  ]);
 
-  if (!foundUser)
-    return res.status(404).json({
-      message: "User not found",
-    });
+  const foundUser = rows[0];
+
+  if (!foundUser) {
+    return res.status(404).json({ message: "User not found" });
+  }
 
   const match = await bcrypt.compare(password, foundUser.password);
-  if (!match)
+
+  if (!match) {
     return res.status(400).json({ message: "Username or Password Incorrect" });
+  }
 
   const accessToken = jwt.sign(
-    { username: foundUser.username },
+    { id: foundUser.id, username },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "15m" },
+    { expiresIn: "1m" },
   );
 
-  const newRefreshToken = jwt.sign(
-    { username: foundUser.username },
+  const refreshToken = jwt.sign(
+    { id: foundUser.id, username },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "1d" },
   );
 
-  foundUser.refreshToken.push(newRefreshToken);
-  await foundUser.save();
+  await pool.query(
+    "INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)",
+    [foundUser.id, refreshToken],
+  );
 
-  res.cookie("jwt", newRefreshToken, {
+  res.cookie("jwt", refreshToken, {
     httpOnly: true,
     secure: true,
     sameSite: "None",
@@ -71,64 +78,52 @@ export const login = async (req, res) => {
   return res.status(200).json({ accessToken });
 };
 
-// Refresh endpoint
 export const refresh = async (req, res) => {
   const cookies = req.cookies;
-  if (!cookies?.jwt)
-    return res.status(401).json({ message: "Cookie not found" });
+
+  if (!cookies?.jwt) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
   const refreshToken = cookies.jwt;
 
-  const foundUser = await User.findOne({ refreshToken });
+  const [rows] = await pool.query(
+    "SELECT * FROM refresh_tokens WHERE token = ?",
+    [refreshToken],
+  );
 
-  // Scenario - User logged out refresh token deleted/ but even after that someone gives that token
-  if (!foundUser) {
-    try {
-      const decoded = jwt.verify(
-        refreshToken,
-        process.env.REFRESH_TOKEN_SECRET,
-      );
-
-      await User.findOneAndUpdate(
-        { username: decoded.username },
-        { refreshToken: [] },
-      );
-    } catch (err) {
-      console.log("Invalid Refresh Token");
-    }
-
+  if (rows.length === 0) {
     return res.status(403).json({ message: "Unauthorized" });
   }
-
-  // New Refresh Token Array
-  const newRefreshTokenArray = foundUser.refreshToken.filter(
-    (rt) => rt !== refreshToken,
-  );
 
   let decoded;
 
   try {
     decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
   } catch (err) {
-    foundUser.refreshToken = newRefreshTokenArray;
-    await foundUser.save();
+    await pool.query("DELETE FROM refresh_tokens WHERE token = ?", [
+      refreshToken,
+    ]);
+
     return res.sendStatus(403);
   }
 
   const accessToken = jwt.sign(
-    { username: decoded.username },
+    { id: decoded.id, username: decoded.username },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "15m" },
+    { expiresIn: "1m" },
   );
 
   const newRefreshToken = jwt.sign(
-    { username: decoded.username },
+    { id: decoded.id, username: decoded.username },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "1d" },
   );
 
-  foundUser.refreshToken = [...newRefreshTokenArray, newRefreshToken];
-  await foundUser.save();
+  await pool.query("UPDATE refresh_tokens SET token = ? WHERE token = ?", [
+    newRefreshToken,
+    refreshToken,
+  ]);
 
   res.cookie("jwt", newRefreshToken, {
     httpOnly: true,
@@ -137,5 +132,5 @@ export const refresh = async (req, res) => {
     maxAge: 24 * 60 * 60 * 1000,
   });
 
-  return res.status(200).json({ accessToken });
+  return res.json({ accessToken });
 };

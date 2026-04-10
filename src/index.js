@@ -1,9 +1,11 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import morgan from "morgan";
 
 //Module Imports
 import auth from "./modules/auth/auth.routes.js";
+import pins from "./modules/pins/pins.routes.js";
 
 dotenv.config();
 const app = express();
@@ -15,9 +17,11 @@ mongoose
 
 // Middleware
 app.use(express.json());
+app.use(morgan("short"));
 
 // Routes
 app.use("/api/auth", auth);
+app.use("/api/pins", pins);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
