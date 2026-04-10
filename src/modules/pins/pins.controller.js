@@ -1,8 +1,14 @@
 import pool from "../../shared/database/db.js";
+import { createValidate, updateValidate } from "./pins.validate.js";
 
 export const createPin = async (req, res) => {
-  const { title, body, image_link } = req.body;
+  const { error, value } = createValidate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   const { userId } = req.user;
+  const { title, body, image_link } = value;
 
   const [result] = await pool.query(
     "INSERT INTO pins (title, body, image_link, author) VALUES (?, ?, ?, ?)",
@@ -18,7 +24,7 @@ export const createPin = async (req, res) => {
   });
 };
 
-// Public Endpoint
+// Get a Pin (Public Endpoint)
 export const getPins = async (req, res) => {
   const [rows] = await pool.query(`
       SELECT pins.*, users.username AS author
@@ -30,9 +36,12 @@ export const getPins = async (req, res) => {
   return res.status(200).json(rows);
 };
 
-// Public Endpoint
+// Get a Pin by ID (Public Endpoint)
 export const getPinById = async (req, res) => {
   const { id } = req.params;
+  if (!id || isNaN(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
 
   const [rows] = await pool.query(
     `
@@ -53,8 +62,17 @@ export const getPinById = async (req, res) => {
 
 // Update a Pin
 export const updatePin = async (req, res) => {
+  const { error, value } = updateValidate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   const { id } = req.params;
-  const { title, body, image_link } = req.body;
+  if (!id || isNaN(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
+
+  const { title, body, image_link } = value;
 
   const [result] = await pool.query(
     `
@@ -74,6 +92,9 @@ export const updatePin = async (req, res) => {
 
 export const deletePin = async (req, res) => {
   const { id } = req.params;
+  if (!id || isNaN(id)) {
+    return res.status(400).json({ message: "Invalid ID" });
+  }
 
   const [result] = await pool.query("DELETE FROM pins WHERE id = ?", [id]);
 

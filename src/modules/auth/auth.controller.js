@@ -3,9 +3,14 @@ import jwt from "jsonwebtoken";
 
 // Local Imports
 import pool from "../../shared/database/db.js";
+import validate from "./auth.validations.js";
 
 export const register = async (req, res) => {
-  const { username, password } = req.body;
+  const { error, value } = validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+  const { username, password } = value;
 
   const [existing] = await pool.query(
     "SELECT * FROM users WHERE username = ?",
@@ -33,7 +38,12 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { username, password } = req.body;
+  const { error, value } = validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
+  const { username, password } = value;
 
   const [rows] = await pool.query("SELECT * FROM users WHERE username = ?", [
     username,
@@ -54,7 +64,7 @@ export const login = async (req, res) => {
   const accessToken = jwt.sign(
     { id: foundUser.id, username },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "1m" },
+    { expiresIn: "5m" },
   );
 
   const refreshToken = jwt.sign(
@@ -111,7 +121,7 @@ export const refresh = async (req, res) => {
   const accessToken = jwt.sign(
     { id: decoded.id, username: decoded.username },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "1m" },
+    { expiresIn: "5m" },
   );
 
   const newRefreshToken = jwt.sign(
