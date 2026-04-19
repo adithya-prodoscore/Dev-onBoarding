@@ -7,34 +7,59 @@ export const createPin = async (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { userId } = req.user;
+  const { id } = req.user;
   const { title, body, image_link } = value;
 
   const [result] = await pool.query(
     "INSERT INTO pins (title, body, image_link, author) VALUES (?, ?, ?, ?)",
-    [title, body, image_link, userId],
+    [title, body, image_link, id],
   );
 
   return res.status(201).json({
-    id: result.insertId,
     title,
     body,
     image_link,
-    author: userId,
+    author: id,
   });
 };
 
-// Get a Pin (Public Endpoint)
 export const getPins = async (req, res) => {
-  const [rows] = await pool.query(`
-      SELECT pins.*, users.username AS author
-      FROM pins
-      LEFT JOIN users ON pins.author = users.id
-      ORDER BY pins.created_at DESC
-    `);
+  const { authorId, sortBy = "created_at", order = "DESC" } = req.query;
 
-  return res.status(200).json(rows);
+  const allowedSortFields = ["title", "body", "created_at", "author"];
+  const sortField = allowedSortFields.includes(sortBy) ? sortBy : "created_at";
+  const sortOrder = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+  let query = `
+      SELECT pins.*, users.username AS author_name 
+      FROM pins 
+      LEFT JOIN users ON pins.author = users.id
+    `;
+
+  const params = [];
+  if (authorId) {
+    query += ` WHERE pins.author = ?`;
+    params.push(authorId);
+  }
+
+  query += ` ORDER BY ${sortField} ${sortOrder}`;
+
+  const [rows] = await pool.query(query, params);
+
+  res.status(200).json(rows);
 };
+
+// Get a Pin (Public Endpoint)
+// export const getPins = async (req, res) => {
+//   const [rows] = await pool.query(`
+//       SELECT pins.*, users.username AS author
+//       FROM pins
+//       LEFT JOIN users ON pins.author = users.id
+//       ORDER BY pins.created_at DESC
+//     `);
+
+//   return res.status(200).json(rows);
+// };
 
 // Get a Pin by ID (Public Endpoint)
 export const getPinById = async (req, res) => {

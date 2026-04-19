@@ -69,6 +69,16 @@ paths:
         403:
           description: Invalid refresh token
 
+  /api/auth/logout:
+    post:
+      summary: Logout user and clear session
+      tags: [Auth]
+      responses:
+        200:
+          description: Logged out successfully
+        204:
+          description: No active session found (no cookie present)
+
   # ---------------- PINS ---------------- #
 
   /api/pins:
@@ -77,18 +87,29 @@ paths:
       tags: [Pins]
       parameters:
         - in: query
-          name: author
+          name: authorId
           schema:
-            type: string
-          description: Filter pins by author
+            type: integer
+          description: Filter pins by author ID
         - in: query
-          name: sort
+          name: sortBy
           schema:
             type: string
-          description: Sort by field (e.g. createdAt)
+            enum: [title, body, created_at, author]
+            default: created_at
+          description: Field to sort the results by
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: DESC
+          description: Sort direction
       responses:
         200:
           description: List of pins
+        500:
+          description: Internal server error
 
     post:
       summary: Create a new pin (requires auth)

@@ -2,7 +2,7 @@ import express from "express";
 const router = express.Router();
 
 // Controller Imports
-import { register, login, refresh } from "./auth.controller.js";
+import { register, login, refresh, logout } from "./auth.controller.js";
 
 // User Register
 router.post("/register", register);
@@ -11,7 +11,7 @@ router.post("/register", register);
 router.post("/login", login);
 
 // User Logout
-// router.post("/logout", logout);
+router.post("/logout", logout);
 
 // Refresh Endpoint
 router.post("/refresh", refresh);

@@ -144,3 +144,22 @@ export const refresh = async (req, res) => {
 
   return res.json({ accessToken });
 };
+
+export const logout = async (req, res) => {
+  const cookies = req.cookies;
+  if (!cookies?.jwt) return res.sendStatus(204); // 204 - No contnet
+
+  const refreshToken = cookies.jwt;
+
+  await pool.query("DELETE FROM refresh_tokens WHERE token = ?", [
+    refreshToken,
+  ]);
+
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+  });
+
+  return res.status(200).json({ message: "Logged out successfully" });
+};
