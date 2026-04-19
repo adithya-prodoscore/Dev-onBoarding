@@ -70,29 +70,32 @@ describe("createPin", () => {
   });
 });
 
-// describe("getPins", () => {
-//   beforeEach(() => {
-//     jest.clearAllMocks();
-//   });
+describe("getPins", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-//   it("should return all pins with 200", async () => {
-//     const mockRows = [
-//       { id: 1, title: "Pin 1", author: "user1" },
-//       { id: 2, title: "Pin 2", author: "user2" },
-//     ];
+  it("should return all pins with 200", async () => {
+    const mockRows = [
+      { id: 1, title: "Pin 1", author: "user1", author_name: "User One" },
+      { id: 2, title: "Pin 2", author: "user2", author_name: "User Two" },
+    ];
 
-//     mockQuery.mockResolvedValue([mockRows]);
+    mockQuery.mockResolvedValue([mockRows]);
 
-//     const req = {};
-//     const res = mockResponse();
+    const req = {
+      query: {},
+    };
 
-//     await getPins(req, res);
+    const res = mockResponse();
 
-//     expect(mockQuery).toHaveBeenCalled();
-//     expect(res.status).toHaveBeenCalledWith(200);
-//     expect(res.json).toHaveBeenCalledWith(mockRows);
-//   });
-// });
+    await getPins(req, res);
+
+    expect(mockQuery).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(mockRows);
+  });
+});
 
 describe("getPinById", () => {
   beforeEach(() => {
