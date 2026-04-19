@@ -49,18 +49,6 @@ export const getPins = async (req, res) => {
   res.status(200).json(rows);
 };
 
-// Get a Pin (Public Endpoint)
-// export const getPins = async (req, res) => {
-//   const [rows] = await pool.query(`
-//       SELECT pins.*, users.username AS author
-//       FROM pins
-//       LEFT JOIN users ON pins.author = users.id
-//       ORDER BY pins.created_at DESC
-//     `);
-
-//   return res.status(200).json(rows);
-// };
-
 // Get a Pin by ID (Public Endpoint)
 export const getPinById = async (req, res) => {
   const { id } = req.params;
